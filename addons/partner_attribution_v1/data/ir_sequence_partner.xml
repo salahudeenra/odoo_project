@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="0">
+
+    <!-- Partner UID -->
+    <record id="seq_partner_attribution_uid" model="ir.sequence">
+        <field name="name">Partner Attribution UID</field>
+        <field name="code">partner_attribution.partner_uid</field>
+        <field name="prefix">PID-</field>
+        <field name="padding">6</field>
+        <field name="implementation">standard</field>
+    </record>
+
+    <!-- Partner Code -->
+    <record id="seq_partner_attribution_code" model="ir.sequence">
+        <field name="name">Partner Attribution Code</field>
+        <field name="code">partner_attribution.partner_code</field>
+        <field name="prefix">PC-</field>
+        <field name="padding">6</field>
+        <field name="implementation">standard</field>
+    </record>
+
+</odoo>

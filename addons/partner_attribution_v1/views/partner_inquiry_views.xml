@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- TREE VIEW -->
+  <record id="view_partner_inquiry_tree" model="ir.ui.view">
+    <field name="name">partner.attribution.inquiry.tree</field>
+    <field name="model">partner.attribution.inquiry</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="name"/>
+        <field name="applicant_name"/>
+        <field name="email"/>
+        <field name="phone"/>
+        <field name="partner_role"/>
+        <field name="state"/>
+        <field name="crm_lead_id"/>
+        <field name="partner_id"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- FORM VIEW -->
+  <record id="view_partner_inquiry_form" model="ir.ui.view">
+    <field name="name">partner.attribution.inquiry.form</field>
+    <field name="model">partner.attribution.inquiry</field>
+    <field name="arch" type="xml">
+      <form string="Partner Inquiry">
+        <header>
+
+          <!-- Enlist (only in inquiry) -->
+          <button name="action_enlist_partner"
+                  type="object"
+                  string="Enlist (Create Lead)"
+                  class="btn-primary"
+                  invisible="state != 'inquiry'"/>
+
+          <!-- Approve (only in enlisted) -->
+          <button name="action_approve_partner"
+                  type="object"
+                  string="Approve"
+                  class="btn-primary"
+                  invisible="state != 'enlisted'"/>
+
+          <!-- Reject (not after approved/rejected) -->
+          <button name="action_reject"
+                  type="object"
+                  string="Reject"
+                  class="btn-secondary"
+                  invisible="state in ('approved','rejected')"/>
+
+          <!-- Open Lead -->
+          <button name="action_open_lead"
+                  type="object"
+                  string="Open Lead"
+                  class="btn-secondary"
+                  invisible="crm_lead_id == False"/>
+
+          <!-- Open Partner -->
+          <button name="action_open_partner"
+                  type="object"
+                  string="Open Partner"
+                  class="btn-secondary"
+                  invisible="partner_id == False"/>
+
+          <field name="state"
+                 widget="statusbar"
+                 statusbar_visible="inquiry,enlisted,approved,rejected"/>
+        </header>
+
+        <sheet>
+
+          <group>
+            <field name="name" readonly="1"/>
+            <field name="company_id" readonly="1"/>
+          </group>
+
+          <group string="Applicant">
+            <field name="applicant_name" readonly="state in ('approved','rejected')"/>
+            <field name="applicant_company" readonly="state in ('approved','rejected')"/>
+            <field name="email" readonly="state in ('approved','rejected')"/>
+            <field name="phone" readonly="state in ('approved','rejected')"/>
+            <field name="partner_role" readonly="state in ('approved','rejected')"/>
+          </group>
+
+          <group string="Admission / Compliance">
+            <field name="vat" readonly="state in ('approved','rejected')"/>
+            <field name="irs" readonly="state in ('approved','rejected')"/>
+            <field name="coc" readonly="state in ('approved','rejected')"/>
+            <field name="iban" readonly="state in ('approved','rejected')"/>
+            <field name="attachment_ids" widget="many2many_binary" readonly="state in ('approved','rejected')"/>
+          </group>
+
+          <group string="Notes">
+            <field name="note" readonly="state in ('approved','rejected')"/>
+          </group>
+
+          <group string="Screening">
+            <field name="crm_lead_id" readonly="1"/>
+          </group>
+
+          <group string="Result">
+            <field name="partner_id" readonly="1"/>
+            <field name="signup_url" readonly="1" invisible="signup_url == False"/>
+          </group>
+
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ACTION -->
+  <record id="action_partner_inquiries" model="ir.actions.act_window">
+    <field name="name">Partner Inquiries</field>
+    <field name="res_model">partner.attribution.inquiry</field>
+    <field name="view_mode">tree,form</field>
+  </record>
+
+  <!-- MENU -->
+  <menuitem id="menu_partner_inquiries"
+            name="Inquiries"
+            parent="partner_attribution_v1.menu_partner_attribution_root"
+            action="partner_attribution_v1.action_partner_inquiries"
+            sequence="5"/>
+
+</odoo>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- REPORT ACTION -->
+  <record id="action_report_partner_contract" model="ir.actions.report">
+    <field name="name">Partner Contract</field>
+    <field name="model">res.partner</field>
+    <field name="report_type">qweb-pdf</field>
+
+    <!-- Must match the template's xmlid (module.template_id) -->
+    <field name="report_name">partner_attribution_v1.report_partner_contract</field>
+    <field name="report_file">partner_attribution_v1.report_partner_contract</field>
+
+    <!-- SAFE filename: do NOT reference custom fields here -->
+    <field name="print_report_name">'Partner_Contract_%s' % (object.id)</field>
+
+    <!-- Optional: show in Print menu on partner form -->
+    <field name="binding_model_id" ref="base.model_res_partner"/>
+    <field name="binding_type">report</field>
+  </record>
+
+  <!-- QWEB TEMPLATE -->
+  <template id="report_partner_contract">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="web.external_layout">
+          <div class="page">
+            <h2>Partner Agreement</h2>
+
+            <p>This Partner Agreement is made between:</p>
+
+            <ul>
+              <li>
+                <strong>Company:</strong>
+                <span t-esc="(o.company_id and o.company_id.name) or ''"/>
+              </li>
+
+              <li>
+                <strong>Partner:</strong>
+                <span t-esc="o.name or ''"/>
+              </li>
+
+              <!-- SAFE custom fields: only display if the field exists -->
+              <li>
+                <strong>Partner Code:</strong>
+                <t t-if="'partner_code' in o._fields">
+                  <span t-esc="o.partner_code or ''"/>
+                </t>
+                <t t-else="">
+                  <span>-</span>
+                </t>
+              </li>
+
+              <li>
+                <strong>Partner UID:</strong>
+                <t t-if="'partner_uid' in o._fields">
+                  <span t-esc="o.partner_uid or ''"/>
+                </t>
+                <t t-else="">
+                  <span>-</span>
+                </t>
+              </li>
+
+              <li>
+                <strong>Role:</strong>
+                <t t-if="'partner_role' in o._fields">
+                  <span t-esc="o.partner_role or ''"/>
+                </t>
+                <t t-else="">
+                  <span>-</span>
+                </t>
+              </li>
+
+              <li>
+                <strong>Commission Rate:</strong>
+                <t t-if="'commission_rate' in o._fields">
+                  <span t-esc="o.commission_rate or 0.0"/>%
+                </t>
+                <t t-else="">
+                  <span>0%</span>
+                </t>
+              </li>
+            </ul>
+
+            <h4>Basic Terms</h4>
+            <ol>
+              <li>Partner referrals are tracked using Partner Code attribution.</li>
+              <li>Commission is calculated from posted customer invoices (untaxed amount).</li>
+              <li>Payout requires KYC completion/approval per company policy.</li>
+            </ol>
+
+            <p style="margin-top:24px;">
+              <strong>Generated On:</strong>
+              <span t-esc="time.strftime('%Y-%m-%d')"/>
+            </p>
+
+          </div>
+        </t>
+      </t>
+    </t>
+  </template>
+
+</odoo>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- SALE ORDER search -->
+    <record id="view_sale_order_filter_partner_attribution_v1" model="ir.ui.view">
+        <field name="name">sale.order.search.partner_attribution_v1</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="attributed_partner_id" string="Attributed Partner"/>
+
+                <filter string="Attribution Locked"
+                        name="attr_locked"
+                        domain="[('attribution_locked','=',True)]"/>
+
+                <group expand="0" string="Group By">
+                    <filter string="Attributed Partner"
+                            name="grp_attr_partner"
+                            context="{'group_by':'attributed_partner_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ACCOUNT MOVE (Invoice) search -->
+    <record id="view_account_move_filter_partner_attribution_v1" model="ir.ui.view">
+        <field name="name">account.move.search.partner_attribution_v1</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_move_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+
+                <field name="attributed_partner_id" string="Attributed Partner"/>
+
+                <filter string="Attribution Locked"
+                        name="inv_attr_locked"
+                        domain="[('attribution_locked','=',True)]"/>
+
+                <filter string="Commission Pending"
+                        name="commission_pending"
+                        domain="[('commission_bill_state','=','pending')]"/>
+
+                <filter string="Commission Billed"
+                        name="commission_billed"
+                        domain="[('commission_bill_state','=','billed')]"/>
+
+                <filter string="In Payout Batch"
+                        name="in_payout_batch"
+                        domain="[('partner_payout_batch_id','!=',False)]"/>
+
+                <group expand="0" string="Group By">
+                    <filter string="Attributed Partner"
+                            name="grp_inv_attr_partner"
+                            context="{'group_by':'attributed_partner_id'}"/>
+                    <filter string="Payout Batch"
+                            name="grp_payout_batch"
+                            context="{'group_by':'partner_payout_batch_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

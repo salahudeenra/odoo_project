@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Add a card/link in Portal Home -->
+  <template id="portal_my_home_inherit_partner" inherit_id="portal.portal_my_home" name="Portal Home Partner Link">
+    <xpath expr="//div[contains(@class,'o_portal_docs')]" position="inside">
+      <a class="btn btn-outline-primary me-2 mb-2" href="/partners/portal">
+        Partner Portal
+      </a>
+    </xpath>
+  </template>
+
+  <!-- Partner Portal Dashboard -->
+  <template id="portal_partner_dashboard" name="Partner Portal Dashboard">
+    <t t-call="portal.portal_layout">
+      <t t-set="breadcrumbs_searchbar" t-value="True"/>
+      <div class="container o_portal_wrap py-4">
+        <h1 class="mb-3">Partner Portal</h1>
+
+        <div class="row g-3">
+
+          <!-- Profile -->
+          <div class="col-12 col-lg-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <h5 class="card-title">Profile</h5>
+                <div><strong>Name:</strong> <span t-esc="partner.name"/></div>
+                <div><strong>Email:</strong> <span t-esc="partner.email or ''"/></div>
+                <div><strong>Phone:</strong> <span t-esc="partner.phone or ''"/></div>
+                <div class="mt-2">
+                  <strong>Role:</strong> <span t-esc="role_label or ''"/>
+                </div>
+
+                <t t-if="partner.partner_uid">
+                  <div class="mt-2"><strong>Partner ID:</strong> <span t-esc="partner.partner_uid"/></div>
+                </t>
+                <t t-if="partner.partner_code">
+                  <div><strong>Partner Code:</strong> <span t-esc="partner.partner_code"/></div>
+                </t>
+              </div>
+            </div>
+          </div>
+
+          <!-- KYC -->
+          <div class="col-12 col-lg-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <h5 class="card-title">Compliance (KYC)</h5>
+                <div>
+                  <strong>Status:</strong>
+                  <span t-esc="partner.kyc_status or ''"/>
+                </div>
+                <t t-if="partner.kyc_verified_on">
+                  <div><strong>Verified On:</strong> <span t-esc="partner.kyc_verified_on"/></div>
+                </t>
+                <div class="text-muted mt-2">
+                  (Scaffold) Upload/verification flow can be added next.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commission Ledger Table (NEW) -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h5 class="card-title mb-0">Commission Ledger</h5>
+                  <span class="text-muted small">Last 50 entries</span>
+                </div>
+
+                <t t-if="ledger_lines and len(ledger_lines) &gt; 0">
+                  <div class="table-responsive mt-3">
+                    <table class="table table-sm table-hover align-middle">
+                      <thead>
+                        <tr>
+                          <th>Reference</th>
+                          <th>Invoice</th>
+                          <th>Type</th>
+                          <th class="text-end">Commission</th>
+                          <th>Status</th>
+                          <th>Paid At</th>
+                          <th>Vendor Bill</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <t t-foreach="ledger_lines" t-as="l">
+                          <tr>
+                            <td><t t-esc="l.display_name or ''"/></td>
+                            <td><t t-esc="(l.invoice_id and (l.invoice_id.name or l.invoice_id.ref)) or ''"/></td>
+                            <td><t t-esc="dict(l._fields['entry_type'].selection).get(l.entry_type, l.entry_type)"/></td>
+
+                            <td class="text-end">
+                              <t t-esc="l.currency_id and (l.currency_id.symbol or '') or ''"/>
+                              <t t-esc="('%.2f' % (l.commission_amount or 0.0))"/>
+                            </td>
+
+                            <td><t t-esc="dict(l._fields['state'].selection).get(l.state, l.state)"/></td>
+                            <td><t t-esc="l.invoice_paid_at or ''"/></td>
+                            <td><t t-esc="(l.vendor_bill_id and l.vendor_bill_id.name) or ''"/></td>
+                          </tr>
+                        </t>
+                      </tbody>
+                    </table>
+                  </div>
+                </t>
+
+                <t t-else="">
+                  <div class="alert alert-info mt-3 mb-0">
+                    No commission entries found yet.
+                  </div>
+                </t>
+              </div>
+            </div>
+          </div>
+
+          <!-- Documents -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Documents</h5>
+                <p class="text-muted mb-0">
+                  (Scaffold) Contract documents will appear here once attached/assigned.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Help -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Help</h5>
+                <ul class="mb-0">
+                  <li><a href="/partners/contact">Contact</a></li>
+                  <li><a href="/partners/terms">Partner Terms</a></li>
+                  <li><a href="/partners/privacy">Privacy Policy</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Role-based sections (scaffold only) -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Role Sections</h5>
+
+                <t t-if="role == 'lead'">
+                  <div class="alert alert-info mb-0">
+                    Leads section (scaffold): lead submission + tracking will go here.
+                  </div>
+                </t>
+
+                <t t-elif="role == 'sales_agent'">
+                  <div class="alert alert-info mb-0">
+                    Orders/commission section (scaffold): assigned orders + commission summary will go here.
+                  </div>
+                </t>
+
+                <t t-elif="role == 'ap'">
+                  <div class="alert alert-info mb-0">
+                    Affiliate section (scaffold): referral links + performance summary will go here.
+                  </div>
+                </t>
+
+                <t t-elif="role == 'sales_partner'">
+                  <div class="alert alert-info mb-0">
+                    Pricelist/discount section (scaffold): partner pricelist and order workflow will go here.
+                  </div>
+                </t>
+
+                <t t-else="">
+                  <div class="text-muted">
+                    No role selected yet.
+                  </div>
+                </t>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </t>
+  </template>
+
+</odoo>

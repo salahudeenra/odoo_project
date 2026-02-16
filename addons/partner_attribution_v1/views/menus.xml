@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root menu (Officer/Manager only) -->
+    <menuitem id="menu_partner_attribution_root"
+              name="Partner Attribution"
+              sequence="10"
+              groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"/>
+
+    <!-- Ledger menu (Officer/Manager only) -->
+    <menuitem id="menu_partner_attribution_ledger"
+              name="Commission Ledger"
+              parent="partner_attribution_v1.menu_partner_attribution_root"
+              action="partner_attribution_v1.action_partner_attribution_ledger"
+              sequence="20"
+              groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"/>
+
+    <!-- Payout batches menu (Officer/Manager only) -->
+    <menuitem id="menu_partner_payout_batches"
+              name="Payout Batches"
+              parent="partner_attribution_v1.menu_partner_attribution_root"
+              action="partner_attribution_v1.action_partner_payout_batches"
+              sequence="30"
+              groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"/>
+</odoo>

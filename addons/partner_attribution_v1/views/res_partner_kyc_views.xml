@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_res_partner_form_inherit_partner_kyc_v1" model="ir.ui.view">
+    <field name="name">res.partner.form.partner_kyc_v1</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_partner_form"/>
+    <field name="arch" type="xml">
+
+      <xpath expr="//sheet//group" position="inside">
+        <group string="Partner KYC (v1)">
+
+          <!-- Status Fields -->
+          <group>
+            <field name="kyc_status" readonly="1"/>
+            <field name="kyc_blocked"/>
+            <field name="bank_verified" readonly="1"/>
+            <field name="vat_verified" readonly="1"/>
+            <field name="company_verified" readonly="1"/>
+          </group>
+
+          <separator string="KYC Actions"/>
+
+          <!-- Status Change Buttons -->
+          <group col="4">
+            <button name="action_set_kyc_pending"
+                    type="object"
+                    string="Set Pending"
+                    class="btn-secondary"/>
+
+            <button name="action_set_kyc_verified"
+                    type="object"
+                    string="Set Verified"
+                    class="btn-primary"/>
+
+            <button name="action_set_kyc_complete"
+                    type="object"
+                    string="Set Complete"
+                    class="btn-primary"/>
+
+            <button name="action_set_kyc_rejected"
+                    type="object"
+                    string="Reject"
+                    class="btn-secondary"/>
+
+            <button name="action_set_kyc_blocked"
+                    type="object"
+                    string="Block"
+                    class="btn-danger"/>
+
+            <button name="action_set_kyc_unblocked"
+                    type="object"
+                    string="Unblock"
+                    class="btn-secondary"/>
+
+            <button name="action_set_bank_verified"
+                    type="object"
+                    string="Bank Verified"
+                    class="btn-primary"/>
+
+            <button name="action_set_bank_unverified"
+                    type="object"
+                    string="Bank Unverified"
+                    class="btn-secondary"/>
+          </group>
+
+        </group>
+      </xpath>
+
+    </field>
+  </record>
+</odoo>

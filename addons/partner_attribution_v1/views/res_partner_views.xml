@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_partner_form_inherit_partner_attribution_v1" model="ir.ui.view">
+        <field name="name">res.partner.form.partner_attribution_v1</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//sheet//div[contains(@class,'oe_button_box')]" position="inside">
+
+                <button name="action_approve_partner"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-check"
+                        invisible="partner_state == 'approved'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Approve</span>
+                    </div>
+                </button>
+
+                <button name="action_reset_to_draft"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-undo"
+                        invisible="partner_state != 'approved'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Reset</span>
+                    </div>
+                </button>
+
+                <button name="action_generate_portal_invite_link"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-link"
+                        invisible="not email">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Invite Link</span>
+                    </div>
+                </button>
+
+                <button name="action_generate_partner_contract"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-file-pdf-o">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Contract</span>
+                    </div>
+                </button>
+
+            </xpath>
+
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Partner Attribution">
+                    <group>
+                        <group string="Partner System (v1)">
+                            <field name="partner_state" readonly="1"/>
+                            <field name="partner_role"/>
+                            <field name="partner_uid" readonly="1"/>
+                            <field name="partner_code" readonly="1"/>
+                            <field name="commission_rate"/>
+                        </group>
+
+                        <group string="Portal Access">
+                            <field name="email"/>
+                            <field name="portal_invite_url" readonly="1"/>
+                            <field name="signup_url" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="KYC">
+                        <group>
+                            <field name="kyc_status"/>
+                            <field name="kyc_blocked"/>
+                            <field name="kyc_verified_on" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="bank_verified"/>
+                            <field name="bank_verified_on" readonly="1"/>
+                            <field name="company_verified"/>
+                            <field name="company_verified_on" readonly="1"/>
+                            <field name="vat_verified"/>
+                            <field name="vat_verified_on" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="kyc_note"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

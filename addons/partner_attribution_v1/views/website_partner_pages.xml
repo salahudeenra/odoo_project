@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- ===================== -->
+  <!-- Layout Helpers -->
+  <!-- ===================== -->
+  <template id="partner_footer_links">
+    <div class="mt-5 pt-4 border-top">
+      <div class="d-flex flex-wrap gap-3">
+        <a href="/partners/privacy">Privacy Policy</a>
+        <a href="/partners/terms">Partner Terms</a>
+        <a href="/partners/contact">Contact</a>
+        <a href="/web/login">Login</a>
+      </div>
+    </div>
+  </template>
+
+  <!-- ===================== -->
+  <!-- /partners -->
+  <!-- ===================== -->
+  <template id="website_partners_home" name="Partners Home">
+    <t t-call="website.layout">
+      <div class="container py-5">
+        <h1 class="mb-2">Partner Program</h1>
+        <p class="text-muted mb-4">
+          Overview of the partner program. Choose a role and apply.
+        </p>
+
+        <div class="row g-3">
+          <t t-foreach="roles.items()" t-as="it">
+            <t t-set="role_key" t-value="it[0]"/>
+            <t t-set="role" t-value="it[1]"/>
+            <div class="col-12 col-md-6 col-lg-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h5 class="card-title" t-esc="role['name']"/>
+                  <p class="card-text text-muted" t-esc="role['desc']"/>
+                </div>
+                <div class="card-footer bg-transparent d-flex gap-2">
+                  <a class="btn btn-outline-primary btn-sm"
+                     t-att-href="'/partners/%s' % role['slug']">
+                    Learn more
+                  </a>
+                  <a class="btn btn-primary btn-sm"
+                     t-att-href="'/partners/apply?role=%s' % role_key">
+                    Apply
+                  </a>
+                </div>
+              </div>
+            </div>
+          </t>
+        </div>
+
+        <t t-call="partner_attribution_v1.partner_footer_links"/>
+      </div>
+    </t>
+  </template>
+
+  <!-- ===================== -->
+  <!-- /partners/<role> -->
+  <!-- ===================== -->
+  <template id="website_partner_role_page" name="Partner Role Page">
+    <t t-call="website.layout">
+      <div class="container py-5">
+        <div class="mb-4">
+          <a href="/partners" class="text-muted">← Back to partner program</a>
+        </div>
+
+        <h1 class="mb-2" t-esc="role['name']"/>
+        <p class="text-muted" t-esc="role['desc']"/>
+
+        <div class="mt-4">
+          <h4>Requirements</h4>
+          <ul class="text-muted">
+            <li>Basic compliance/KYC completion before payouts</li>
+            <li>Agreement acceptance (contract document)</li>
+            <li>Follow program rules and reporting process</li>
+          </ul>
+        </div>
+
+        <div class="mt-4">
+          <a class="btn btn-primary"
+             t-att-href="'/partners/apply?role=%s' % role_key">
+            Apply for this role
+          </a>
+        </div>
+
+        <t t-call="partner_attribution_v1.partner_footer_links"/>
+      </div>
+    </t>
+  </template>
+
+
+<!-- ===================== -->
+<!-- /partners/apply (GET) -->
+<!-- ===================== -->
+<template id="website_partner_apply" name="Partner Apply">
+  <t t-call="website.layout">
+    <div class="container py-5" style="max-width: 820px;">
+      <div class="mb-4">
+        <a href="/partners" class="text-muted">← Back to partner program</a>
+      </div>
+
+      <h1 class="mb-3">Partner Application</h1>
+
+      <t t-if="error">
+        <div class="alert alert-danger" role="alert">
+          <t t-esc="error"/>
+        </div>
+      </t>
+
+      <form action="/partners/apply/submit" method="post" class="card">
+        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Role</label>
+            <select class="form-select" name="partner_role" required="required">
+              <option value="">Select a role</option>
+              <t t-foreach="roles.items()" t-as="it">
+                <t t-set="role_key" t-value="it[0]"/>
+                <t t-set="role" t-value="it[1]"/>
+                <option t-att-value="role_key"
+                        t-att-selected="1 if selected_role == role_key else None">
+                  <t t-esc="role['name']"/>
+                </option>
+              </t>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input class="form-control" type="text" name="applicant_name" required="required"/>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Company</label>
+            <input class="form-control" type="text" name="applicant_company"/>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Email</label>
+              <input class="form-control" type="email" name="email"/>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Phone</label>
+              <input class="form-control" type="text" name="phone"/>
+            </div>
+          </div>
+
+          <!-- Compliance fields requested by client -->
+          <div class="row g-3 mt-1">
+            <div class="col-12 col-md-6">
+              <label class="form-label">VAT / Tax ID</label>
+              <input class="form-control" type="text" name="vat"/>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">IBAN</label>
+              <input class="form-control" type="text" name="iban" placeholder="e.g. NL91ABNA0417164300"/>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">CoC Number</label>
+              <input class="form-control" type="text" name="coc"/>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">IRS / Tax Ref</label>
+              <input class="form-control" type="text" name="irs"/>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label">Message / Note</label>
+            <textarea class="form-control" name="note" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="card-footer bg-transparent d-flex justify-content-end">
+          <button class="btn btn-primary" type="submit">Submit Application</button>
+        </div>
+      </form>
+
+      <t t-call="partner_attribution_v1.partner_footer_links"/>
+    </div>
+  </t>
+</template>
+
+  <!-- ===================== -->
+  <!-- /partners/apply/submit (DONE) -->
+  <!-- ===================== -->
+  <template id="website_partner_apply_done" name="Partner Apply Done">
+    <t t-call="website.layout">
+      <div class="container py-5" style="max-width: 820px;">
+        <h1 class="mb-2">Application Submitted</h1>
+        <p class="text-muted mb-4">
+          Thank you. Your inquiry has been submitted for review.
+        </p>
+
+        <div class="card">
+          <div class="card-body">
+            <div><strong>Inquiry Ref:</strong> <span t-esc="inquiry.name"/></div>
+            <div><strong>Role:</strong> <span t-esc="role['name']"/></div>
+            <div class="text-muted mt-2">
+              We will contact you if more information is needed.
+            </div>
+          </div>
+          <div class="card-footer bg-transparent d-flex gap-2">
+            <a class="btn btn-outline-primary" href="/partners">Back to Partners</a>
+            <a class="btn btn-primary" href="/web/login">Login</a>
+          </div>
+        </div>
+
+        <t t-call="partner_attribution_v1.partner_footer_links"/>
+      </div>
+    </t>
+  </template>
+
+  <!-- ===================== -->
+  <!-- Footer required pages -->
+  <!-- ===================== -->
+  <template id="website_partner_privacy" name="Partner Privacy">
+    <t t-call="website.layout">
+      <div class="container py-5" style="max-width: 820px;">
+        <h1>Privacy Policy</h1>
+        <p class="text-muted">
+          Placeholder privacy policy text. Client can provide final content.
+        </p>
+        <t t-call="partner_attribution_v1.partner_footer_links"/>
+      </div>
+    </t>
+  </template>
+
+  <template id="website_partner_terms" name="Partner Terms">
+    <t t-call="website.layout">
+      <div class="container py-5" style="max-width: 820px;">
+        <h1>Partner Terms</h1>
+        <p class="text-muted">
+          Placeholder partner terms text. Client can provide final content.
+        </p>
+        <t t-call="partner_attribution_v1.partner_footer_links"/>
+      </div>
+    </t>
+  </template>
+
+  <template id="website_partner_contact" name="Partner Contact">
+    <t t-call="website.layout">
+      <div class="container py-5" style="max-width: 820px;">
+        <h1>Contact</h1>
+        <p class="text-muted">
+          Placeholder contact info. Replace with support email/KB links.
+        </p>
+        <ul class="text-muted">
+          <li>Email: support@example.com</li>
+          <li>Knowledge Base: (link here)</li>
+        </ul>
+        <t t-call="partner_attribution_v1.partner_footer_links"/>
+      </div>
+    </t>
+  </template>
+</odoo>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_partner_attribution_ledger_search" model="ir.ui.view">
+    <field name="name">partner.attribution.ledger.search</field>
+    <field name="model">partner.attribution.ledger</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="display_name"/>
+        <field name="partner_id"/>
+        <field name="invoice_id"/>
+        <field name="payout_batch_id"/>
+        <field name="state"/>
+
+        <filter string="Payable" name="st_payable" domain="[('state','=','payable')]"/>
+        <filter string="On Hold" name="st_hold" domain="[('state','=','on_hold')]"/>
+        <filter string="Paid" name="st_paid" domain="[('state','=','paid')]"/>
+        <filter string="Reversed" name="st_rev" domain="[('state','=','reversed')]"/>
+
+        <group expand="0" string="Group By">
+          <filter string="Partner" name="grp_partner" context="{'group_by':'partner_id'}"/>
+          <filter string="Batch" name="grp_batch" context="{'group_by':'payout_batch_id'}"/>
+          <filter string="Status" name="grp_state" context="{'group_by':'state'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="view_partner_attribution_ledger_tree" model="ir.ui.view">
+    <field name="name">partner.attribution.ledger.tree</field>
+    <field name="model">partner.attribution.ledger</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="display_name"/>
+        <field name="partner_id"/>
+        <field name="commission_amount"/>
+        <field name="commission_rate_used"/>
+        <field name="state"/>
+        <field name="partner_kyc_status"/>
+        <field name="payout_batch_id"/>
+        <field name="vendor_bill_id"/>
+        <field name="invoice_paid_at"/>
+      </tree>
+    </field>
+  </record>
+
+  <record id="view_partner_attribution_ledger_form" model="ir.ui.view">
+    <field name="name">partner.attribution.ledger.form</field>
+    <field name="model">partner.attribution.ledger</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_recompute_payout_state" type="object"
+                  string="Recompute State" class="btn-secondary"/>
+        </header>
+        <sheet>
+          <group>
+            <field name="display_name" readonly="1"/>
+            <field name="company_id" readonly="1"/>
+            <field name="partner_id" readonly="1"/>
+            <field name="invoice_id" readonly="1"/>
+            <field name="entry_type" readonly="1"/>
+            <field name="commission_rate_used" readonly="1"/>
+            <field name="commission_amount" readonly="1"/>
+            <field name="state" readonly="1"/>
+          </group>
+          <group>
+            <field name="partner_kyc_status" readonly="1"/>
+            <field name="payout_batch_id" readonly="1"/>
+            <field name="vendor_bill_id" readonly="1"/>
+            <field name="invoice_paid_at" readonly="1"/>
+            <field name="created_at" readonly="1"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_partner_attribution_ledger" model="ir.actions.act_window">
+    <field name="name">Commission Ledger</field>
+    <field name="res_model">partner.attribution.ledger</field>
+    <field name="view_mode">tree,form</field>
+    <field name="search_view_id" ref="partner_attribution_v1.view_partner_attribution_ledger_search"/>
+  </record>
+
+</odoo>

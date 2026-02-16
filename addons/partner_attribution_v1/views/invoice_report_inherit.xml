@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="report_invoice_document_inherit_partner_attribution_v1"
+              inherit_id="account.report_invoice_document">
+
+        <!--Stable anchor: right after the address block -->
+        <xpath expr="//t[@t-set='address']" position="after">
+
+            <t t-if="o.attributed_partner_id">
+                <div class="mt-2">
+                    <strong>Attributed Partner:</strong>
+                    <span t-field="o.attributed_partner_id"/>
+                </div>
+            </t>
+
+            <t t-if="o.attribution_locked">
+                <div class="mt-1">
+                    <strong>Attribution Locked:</strong>
+                    <span>Yes</span>
+                </div>
+
+                <t t-if="o.attribution_locked_at">
+                    <div class="mt-1">
+                        <strong>Locked At:</strong>
+                        <span t-field="o.attribution_locked_at" t-options='{"widget":"datetime"}'/>
+                    </div>
+                </t>
+
+                <t t-if="o.attribution_locked_by">
+                    <div class="mt-1">
+                        <strong>Locked By:</strong>
+                        <span t-field="o.attribution_locked_by"/>
+                    </div>
+                </t>
+            </t>
+
+        </xpath>
+
+    </template>
+
+</odoo>

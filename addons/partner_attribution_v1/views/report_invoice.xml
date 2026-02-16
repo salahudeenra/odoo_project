@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit the default invoice report -->
+    <template id="report_invoice_document_inherit_partner_attribution_v1"
+              inherit_id="account.report_invoice_document">
+
+        <!-- Odoo 17 safe anchor: "information_block" (right-side invoice info area) -->
+        <xpath expr="//t[@t-set='information_block']" position="inside">
+            <div class="col-6">
+                <t t-if="o.attributed_partner_id">
+                    <div class="mb-1">
+                        <strong>Attributed Partner:</strong>
+                        <span t-esc="o.attributed_partner_id.display_name"/>
+                    </div>
+                </t>
+
+                <!-- Optional: show lock status on PDF -->
+                <t t-if="o.attribution_locked">
+                    <div class="mb-1">
+                        <strong>Attribution Locked:</strong>
+                        <span>Yes</span>
+                    </div>
+
+                    <t t-if="o.attribution_locked_at">
+                        <div class="mb-1">
+                            <strong>Locked At:</strong>
+                            <span t-esc="format_datetime(o.env, o.attribution_locked_at)"/>
+                        </div>
+                    </t>
+
+                    <t t-if="o.attribution_locked_by">
+                        <div class="mb-1">
+                            <strong>Locked By:</strong>
+                            <span t-esc="o.attribution_locked_by.display_name"/>
+                        </div>
+                    </t>
+                </t>
+            </div>
+        </xpath>
+
+    </template>
+</odoo>
