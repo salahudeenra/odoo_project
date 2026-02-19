@@ -32,10 +32,11 @@ class SaleOrder(models.Model):
     # Helpers
     # ----------------------------
     def _find_partner_by_code(self, code):
+        """Lookup an approved partner by code. sudo() to be safe for website/portal contexts."""
         code = (code or "").strip()
         if not code:
             return self.env["res.partner"]
-        return self.env["res.partner"].search(
+        return self.env["res.partner"].sudo().search(
             [("partner_code", "=", code), ("partner_state", "=", "approved")],
             limit=1,
         )
@@ -135,12 +136,22 @@ class SaleOrder(models.Model):
         for vals in vals_list:
             vals = dict(vals)
 
+            # Auto-capture referral code ONLY if user didn't set anything
+            auto_from_cookie = False
             if not vals.get("partner_code_input") and not vals.get("attributed_partner_id"):
                 ref_code = (self._get_referral_code_from_http() or "").strip()
                 if ref_code:
                     vals["partner_code_input"] = ref_code
+                    auto_from_cookie = True
 
+            # Sync from code -> partner
             self._sync_attributed_partner_from_code(vals)
+
+            # If code was auto from cookie but invalid/unapproved, clear it (prevents garbage codes on SO)
+            if auto_from_cookie and vals.get("partner_code_input") and not vals.get("attributed_partner_id"):
+                vals["partner_code_input"] = False
+
+            # Sync from partner -> code (if partner was set directly)
             self._sync_code_from_attributed_partner(vals)
 
             if vals.get("attribution_locked"):
@@ -155,10 +166,11 @@ class SaleOrder(models.Model):
         if self.env.context.get("skip_partner_code_sync"):
             return super().write(vals)
 
+        # handle multi-write safely without recursion
         if len(self) > 1 and any(k in vals for k in ("partner_code_input", "attributed_partner_id", "attribution_locked")):
             ok = True
             for order in self:
-                ok = ok and order.with_context(skip_partner_code_sync=True).write(vals)
+                ok = ok and bool(order.with_context(skip_partner_code_sync=True).write(vals))
             return ok
 
         vals = dict(vals)
@@ -188,9 +200,13 @@ class SaleOrder(models.Model):
         vals = super()._prepare_invoice()
 
         if self.attributed_partner_id:
-            vals["attributed_partner_id"] = self.attributed_partner_id.id
-            vals["attribution_locked"] = True
-            vals["attribution_locked_at"] = self.attribution_locked_at or fields.Datetime.now()
-            vals["attribution_locked_by"] = (self.attribution_locked_by.id or self.env.user.id)
+            locked_by = self.attribution_locked_by.id if self.attribution_locked_by else self.env.user.id
+
+            vals.update({
+                "attributed_partner_id": self.attributed_partner_id.id,
+                "attribution_locked": True,
+                "attribution_locked_at": self.attribution_locked_at or fields.Datetime.now(),
+                "attribution_locked_by": locked_by,
+            })
 
         return vals

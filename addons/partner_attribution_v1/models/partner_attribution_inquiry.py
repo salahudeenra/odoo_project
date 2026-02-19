@@ -48,7 +48,6 @@ class PartnerAttributionInquiry(models.Model):
         required=True,
     )
 
-    # Admission / compliance fields
     vat = fields.Char(string="VAT / Tax ID")
     iban = fields.Char(string="IBAN")
     coc = fields.Char(string="CoC Number")
@@ -62,7 +61,6 @@ class PartnerAttributionInquiry(models.Model):
         string="Documents",
     )
 
-    # States used everywhere
     state = fields.Selection(
         [
             ("inquiry", "Inquiry"),
@@ -80,10 +78,25 @@ class PartnerAttributionInquiry(models.Model):
     signup_url = fields.Char(string="Signup / Reset URL", readonly=True, copy=False)
 
     # ----------------------------
-    # Admission Rules (server-side)
+    # Admission Rules (stage-based)
     # ----------------------------
-    def _validate_admission(self):
+    def _validate_admission(self, stage="approve"):
+        """
+        stage:
+          - 'enlist'  => light checks (screening can begin)
+          - 'approve' => strict checks (must pass before creating partner + portal)
+        """
         for rec in self:
+            # ALWAYS (both stages): sanity checks
+            if not rec.applicant_name:
+                raise UserError(_("Full Name is required."))
+
+            if rec.partner_role not in dict(self._fields["partner_role"].selection):
+                raise UserError(_("Invalid Partner Role."))
+
+            # Strict validations only on approve:
+            if stage != "approve":
+                return True
 
             # Email required for portal creation
             if not rec.email:
@@ -99,25 +112,22 @@ class PartnerAttributionInquiry(models.Model):
             # VAT or CoC required for company-based roles
             if rec.partner_role in ("lead", "sales_agent", "sales_partner"):
                 if not rec.vat and not rec.coc:
-                    raise UserError(_(
-                        "For this role, please provide at least one company identifier (VAT or CoC)."
-                    ))
+                    raise UserError(_("For this role, please provide at least one company identifier (VAT or CoC)."))
 
-            # At least one document required for screening roles
+            # Docs required before approval for commercial roles
             if rec.partner_role in ("sales_agent", "sales_partner"):
                 if not rec.attachment_ids:
                     raise UserError(_("Supporting documents must be uploaded before approval."))
+
+        return True
 
     # ----------------------------
     # CRM Lead creation
     # ----------------------------
     def _ensure_crm_lead(self):
         self.ensure_one()
-
-        # crm module check
         if "crm.lead" not in self.env:
             return False
-
         if self.crm_lead_id:
             return self.crm_lead_id
 
@@ -149,10 +159,6 @@ class PartnerAttributionInquiry(models.Model):
     # Portal user + fresh signup/reset link
     # ----------------------------
     def _ensure_portal_user_and_link(self, partner):
-        """
-        Fixes 'Invalid signup token' by ALWAYS generating a fresh token
-        via user.action_reset_password() and then building the URL.
-        """
         email = (partner.email or "").strip().lower()
         if not email:
             raise UserError(_("Partner email is required to create a Portal login."))
@@ -183,7 +189,6 @@ class PartnerAttributionInquiry(models.Model):
         except Exception:
             pass
 
-
         partner = user.partner_id.sudo()
         partner.signup_prepare()
 
@@ -202,14 +207,37 @@ class PartnerAttributionInquiry(models.Model):
         return super().create(vals)
 
     # ----------------------------
-    # Actions (match your view)
+    # Website submit helper (NEW)
+    # ----------------------------
+    def action_submit_from_website(self):
+        """
+        Website submit should:
+          - create CRM lead for screening proof
+          - move inquiry -> enlisted (screening started)
+        It must NOT block on strict approval requirements like documents.
+        """
+        for rec in self:
+            if rec.state in ("approved", "rejected"):
+                continue
+
+            # light checks only
+            rec._validate_admission(stage="enlist")
+
+            rec._ensure_crm_lead()
+
+            if rec.state == "inquiry":
+                rec.sudo().write({"state": "enlisted"})
+        return True
+
+    # ----------------------------
+    # Actions (match view)
     # ----------------------------
     def action_enlist_partner(self):
         """Inquiry -> Enlisted, and create CRM Lead for screening."""
         for rec in self:
             if rec.state != "inquiry":
                 continue
-            rec._validate_admission()
+            rec._validate_admission(stage="enlist")
             rec._ensure_crm_lead()
             rec.sudo().write({"state": "enlisted"})
         return True
@@ -248,21 +276,14 @@ class PartnerAttributionInquiry(models.Model):
         return True
 
     def action_approve_partner(self):
-        """
-        Enlisted -> Approved:
-        - admission validation
-        - create/update res.partner
-        - approve partner
-        - move attachments to partner
-        - ensure portal user + fresh signup/reset link
-        """
         Partner = self.env["res.partner"].sudo()
 
         for rec in self:
             if rec.state != "enlisted":
                 raise UserError(_("Only Enlisted inquiries can be Approved."))
 
-            rec._validate_admission()
+            # ✅ strict checks here
+            rec._validate_admission(stage="approve")
 
             partner = False
             if rec.email:
@@ -288,7 +309,6 @@ class PartnerAttributionInquiry(models.Model):
             else:
                 partner = Partner.create(vals)
 
-            # Bank account (IBAN)
             if rec.iban:
                 Bank = self.env["res.partner.bank"].sudo()
                 iban_clean = (rec.iban or "").replace(" ", "").upper()
@@ -296,22 +316,18 @@ class PartnerAttributionInquiry(models.Model):
                 if not existing:
                     Bank.create({"partner_id": partner.id, "acc_number": iban_clean})
 
-            # Partner role on partner if field exists
             if "partner_role" in partner._fields:
                 partner.write({"partner_role": rec.partner_role})
 
-            # Approve partner method if exists
             if hasattr(partner, "action_approve_partner"):
                 partner.action_approve_partner()
             else:
                 if "partner_state" in partner._fields:
                     partner.write({"partner_state": "approved"})
 
-            # Move attachments to partner record
             if rec.attachment_ids:
                 rec.attachment_ids.sudo().write({"res_model": "res.partner", "res_id": partner.id})
 
-            # Portal user + fresh link
             _user, signup_url = rec._ensure_portal_user_and_link(partner)
 
             rec.sudo().write({

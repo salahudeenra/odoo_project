@@ -69,10 +69,4 @@
     <field name="res_model">partner.attribution.payout.batch</field>
     <field name="view_mode">tree,form</field>
   </record>
-
-  <menuitem id="menu_partner_payout_batches"
-            name="Payout Batches"
-            parent="partner_attribution_v1.menu_partner_attribution_root"
-            action="action_partner_payout_batches"
-            sequence="30"/>
 </odoo>

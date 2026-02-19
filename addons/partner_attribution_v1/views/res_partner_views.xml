@@ -7,12 +7,14 @@
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
 
-            <xpath expr="//sheet//div[contains(@class,'oe_button_box')]" position="inside">
+            <!-- Button box (stable in Odoo 17) -->
+            <xpath expr="//div[@name='button_box']" position="inside">
 
                 <button name="action_approve_partner"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-check"
+                        groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"
                         invisible="partner_state == 'approved'">
                     <div class="o_stat_info">
                         <span class="o_stat_text">Approve</span>
@@ -23,6 +25,7 @@
                         type="object"
                         class="oe_stat_button"
                         icon="fa-undo"
+                        groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"
                         invisible="partner_state != 'approved'">
                     <div class="o_stat_info">
                         <span class="o_stat_text">Reset</span>
@@ -33,6 +36,7 @@
                         type="object"
                         class="oe_stat_button"
                         icon="fa-link"
+                        groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"
                         invisible="not email">
                     <div class="o_stat_info">
                         <span class="o_stat_text">Invite Link</span>
@@ -42,7 +46,9 @@
                 <button name="action_generate_partner_contract"
                         type="object"
                         class="oe_stat_button"
-                        icon="fa-file-pdf-o">
+                        icon="fa-file-pdf-o"
+                        groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager"
+                        invisible="partner_state != 'approved'">
                     <div class="o_stat_info">
                         <span class="o_stat_text">Contract</span>
                     </div>
@@ -50,12 +56,18 @@
 
             </xpath>
 
+            <!-- Notebook Page -->
             <xpath expr="//sheet/notebook" position="inside">
-                <page string="Partner Attribution">
+                <page string="Partner Attribution"
+                      groups="partner_attribution_v1.group_partner_attr_officer,partner_attribution_v1.group_partner_attr_manager">
+
                     <group>
                         <group string="Partner System (v1)">
                             <field name="partner_state" readonly="1"/>
-                            <field name="partner_role"/>
+
+                            <!-- Keep your business rule (optional): lock role after approval -->
+                            <field name="partner_role" readonly="partner_state == 'approved'"/>
+
                             <field name="partner_uid" readonly="1"/>
                             <field name="partner_code" readonly="1"/>
                             <field name="commission_rate"/>
@@ -86,6 +98,7 @@
                             <field name="kyc_note"/>
                         </group>
                     </group>
+
                 </page>
             </xpath>
 

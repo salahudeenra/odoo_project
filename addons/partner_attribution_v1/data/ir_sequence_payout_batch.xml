@@ -1,10 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
+<odoo noupdate="1">
+
+  <!-- ========================= -->
+  <!-- Sequence: Payout Batch -->
+  <!-- ========================= -->
   <record id="seq_partner_payout_batch" model="ir.sequence">
     <field name="name">Partner Payout Batch</field>
     <field name="code">partner.attribution.payout.batch</field>
     <field name="prefix">PAYOUT/%(year)s/</field>
     <field name="padding">5</field>
     <field name="company_id" eval="False"/>
+    <field name="implementation">standard</field>
+    <field name="active" eval="True"/>
   </record>
+
+  <!-- ========================= -->
+  <!-- CRON: Sync paid vendor bills -> ledger paid -> batch done -->
+  <!-- Runs every 15 minutes -->
+  <!-- ========================= -->
+  <record id="ir_cron_pa_v1_sync_paid_status" model="ir.cron">
+    <field name="name">Partner Attribution: Sync Paid Status</field>
+    <field name="active" eval="True"/>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">15</field>
+    <field name="interval_type">minutes</field>
+    <field name="numbercall">-1</field>
+    <field name="doall" eval="False"/>
+    <field name="model_id" ref="partner_attribution_v1.model_partner_attribution_payout_batch"/>
+    <field name="state">code</field>
+    <!-- ✅ must match your model method name -->
+    <field name="code">model._cron_sync_payout_batches_paid_status()</field>
+  </record>
+
+  <!-- ========================= -->
+  <!-- CRON: Recompute ledger payout state (on_hold/payable) -->
+  <!-- Runs every 30 minutes -->
+  <!-- ========================= -->
+  <record id="ir_cron_pa_v1_recompute_ledger_state" model="ir.cron">
+    <field name="name">Partner Attribution: Recompute Ledger Payout State</field>
+    <field name="active" eval="True"/>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">30</field>
+    <field name="interval_type">minutes</field>
+    <field name="numbercall">-1</field>
+    <field name="doall" eval="False"/>
+    <field name="model_id" ref="partner_attribution_v1.model_partner_attribution_payout_batch"/>
+    <field name="state">code</field>
+    <!-- ✅ must match your model method name -->
+    <field name="code">model._cron_recompute_orphan_ledger_states()</field>
+  </record>
+
 </odoo>

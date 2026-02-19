@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Category (optional but clean) -->
+    <!-- Category -->
     <record id="module_category_partner_attribution" model="ir.module.category">
         <field name="name">Partner Attribution</field>
         <field name="sequence">30</field>
@@ -10,7 +10,6 @@
     <record id="group_partner_attr_officer" model="res.groups">
         <field name="name">Partner Attribution Officer</field>
         <field name="category_id" ref="partner_attribution_v1.module_category_partner_attribution"/>
-        <!-- implies internal user -->
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
@@ -18,7 +17,6 @@
     <record id="group_partner_attr_manager" model="res.groups">
         <field name="name">Partner Attribution Manager</field>
         <field name="category_id" ref="partner_attribution_v1.module_category_partner_attribution"/>
-        <!-- manager implies officer -->
         <field name="implied_ids" eval="[(4, ref('partner_attribution_v1.group_partner_attr_officer'))]"/>
     </record>
 </odoo>

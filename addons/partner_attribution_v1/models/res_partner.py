@@ -180,31 +180,34 @@ class ResPartner(models.Model):
     # ----------------------------
     # Contract (basic) - render + attach
     # ----------------------------
+    # ----------------------------
+    # Contract (render + attach + download)
+    # ----------------------------
     def action_generate_partner_contract(self):
+        """
+        Generates a Partner Contract PDF and stores it as an attachment on res.partner.
+        Returns a download URL action.
+        """
         self.ensure_one()
 
         if self.partner_state != "approved":
             raise UserError(_("Only approved partners can generate a contract."))
 
-        report = self.env.ref("partner_attribution_v1.action_report_partner_contract", raise_if_not_found=False)
-        if not report:
+        report_action = self.env.ref("partner_attribution_v1.action_report_partner_contract", raise_if_not_found=False)
+        if not report_action:
             raise UserError(_("Partner Contract report is not configured."))
 
-        return report.report_action(
-            self,
-            data={
-                "partner_contract_today": fields.Date.context_today(self).strftime("%Y-%m-%d")
-            }
-        )
+        report_xmlid = "partner_attribution_v1.action_report_partner_contract"
 
-        # Pass a safe date string into report context (avoid QWeb 'fields' / 'format_datetime')
-        today_str = fields.Datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Render PDF
+        pdf, _ = self.env["ir.actions.report"].sudo()._render_qweb_pdf(report_xmlid, self.ids)
 
-        pdf, _ = self.env["ir.actions.report"].sudo().with_context(
-            partner_contract_today=today_str
-        )._render_qweb_pdf(report_xmlid, self.ids)
+        if not pdf:
+            raise UserError(_("Contract PDF could not be generated (empty output)."))
 
         filename = "Partner_Contract_%s.pdf" % (self.partner_code or self.id)
+
+        # Store as attachment linked to partner
         attachment = self.env["ir.attachment"].sudo().create({
             "name": filename,
             "type": "binary",
@@ -214,6 +217,7 @@ class ResPartner(models.Model):
             "res_id": self.id,
         })
 
+        # Download
         return {
             "type": "ir.actions.act_url",
             "url": "/web/content/%s?download=true" % attachment.id,

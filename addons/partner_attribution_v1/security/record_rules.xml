@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================
+         Portal record rules (OWN ONLY)
+         ========================= -->
+
+    <!-- Ledger: portal can only read own ledger lines -->
+    <record id="rule_partner_ledger_portal_own" model="ir.rule">
+        <field name="name">Portal: Ledger own only</field>
+        <field name="model_id" ref="partner_attribution_v1.model_partner_attribution_ledger"/>
+        <field name="domain_force">[('partner_id', 'in', [user.partner_id.id, user.partner_id.commercial_partner_id.id])]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Attachments: portal can only read/create attachments linked to own partner -->
+    <record id="rule_partner_attachment_portal_own" model="ir.rule">
+        <field name="name">Portal: Partner documents own only</field>
+        <field name="model_id" ref="base.model_ir_attachment"/>
+        <field name="domain_force">
+            [
+                ('res_model','=','res.partner'),
+                ('res_id','in',[user.partner_id.id, user.partner_id.commercial_partner_id.id])
+            ]
+        </field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Leads: portal lead partners can only read their own leads -->
+    <record id="rule_partner_leads_portal_own" model="ir.rule">
+        <field name="name">Portal: Leads own only</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[('partner_id','=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Sale Orders: portal can only read orders attributed to them -->
+    <record id="rule_partner_sale_orders_portal_own" model="ir.rule">
+        <field name="name">Portal: Sale Orders attributed to partner only</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="domain_force">
+            [('attributed_partner_id','in',[user.partner_id.id, user.partner_id.commercial_partner_id.id])]
+        </field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Invoices: portal can only read their attributed POSTED customer invoices/refunds -->
+    <record id="rule_partner_invoices_portal_own" model="ir.rule">
+        <field name="name">Portal: Invoices attributed to partner only (posted customer docs)</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="domain_force">
+            [
+                ('move_type','in',['out_invoice','out_refund']),
+                ('state','=','posted'),
+                ('attributed_partner_id','in',[user.partner_id.id, user.partner_id.commercial_partner_id.id])
+            ]
+        </field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+</odoo>

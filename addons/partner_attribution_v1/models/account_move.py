@@ -105,16 +105,21 @@ class AccountMove(models.Model):
             move_type = vals.get("move_type")
             if move_type not in ("out_invoice", "out_refund"):
                 continue
-            
+
             ref_code = (self._get_referral_code_from_http() or "").strip()
             if ref_code:
                 partner = self._find_partner_by_code(ref_code)
                 if partner:
                     vals["attributed_partner_id"] = partner.id
 
-        return super().create(vals_list)
+        moves = super().create(vals_list)
+        moves._pa_v1_process_if_paid()
+        return moves
 
-    @api.depends("attributed_partner_id", "amount_untaxed", "currency_id")
+    # ----------------------------
+    # Commission compute
+    # ----------------------------
+    @api.depends("attributed_partner_id", "amount_untaxed", "currency_id", "move_type")
     def _compute_commission_values(self):
         for move in self:
             rate = 0.0
@@ -122,7 +127,12 @@ class AccountMove(models.Model):
                 rate = float(move.attributed_partner_id.commission_rate or 0.0)
 
             move.commission_rate_used = rate
-            move.commission_amount = (move.amount_untaxed or 0.0) * (rate / 100.0) if rate else 0.0
+
+            amt = (move.amount_untaxed or 0.0) * (rate / 100.0) if rate else 0.0
+            if move.move_type == "out_refund" and amt:
+                amt = -abs(amt)
+
+            move.commission_amount = amt
 
     @api.depends("commission_vendor_bill_id", "commission_amount")
     def _compute_commission_bill_state(self):
@@ -138,24 +148,17 @@ class AccountMove(models.Model):
     # Commission Bill helpers
     # ----------------------------
     def _pa_v1_get_commission_expense_account(self):
+        """Odoo 17 safe: use company context + search valid expense types."""
         self.ensure_one()
+        company = self.company_id or self.env.company
         Account = self.env["account.account"].sudo()
 
-        acc = Account.search(
-            [("company_id", "=", self.company_id.id), ("deprecated", "=", False), ("account_type", "=", "expense")],
-            limit=1,
-        )
-        if acc:
-            return acc
+        acc = Account.search([
+            ("company_id", "=", company.id),
+            ("deprecated", "=", False),
+            ("account_type", "in", ("expense", "expense_direct_cost")),
+        ], limit=1)
 
-        acc = Account.search(
-            [
-                ("company_id", "=", self.company_id.id),
-                ("deprecated", "=", False),
-                ("account_type", "in", ("expense", "expense_direct_cost")),
-            ],
-            limit=1,
-        )
         if acc:
             return acc
 
@@ -177,32 +180,74 @@ class AccountMove(models.Model):
             and not self.commission_vendor_bill_id
         )
 
-    def _pa_v1_create_commission_vendor_bill(self):
+    def _pa_v1_create_commission_vendor_bill(self, autopost=True):
         self.ensure_one()
         if not self._pa_v1_should_create_commission_bill():
             return self.commission_vendor_bill_id or False
 
-        partner = self.attributed_partner_id.commercial_partner_id
+        company = self.company_id or self.env.company
+        partner = self.attributed_partner_id.commercial_partner_id.with_company(company)
         expense_acc = self._pa_v1_get_commission_expense_account()
         ref_name = self.name or self.payment_reference or str(self.id)
+
+        # 1) Ensure vendor payable account exists (Community-safe: auto-fallback)
+        payable = partner.property_account_payable_id
+        if not payable:
+            default_payable = company.account_payable_id
+            if not default_payable:
+                raise UserError(_(
+                    "Cannot create Commission Vendor Bill because no payable account is configured.\n\n"
+                    "Fix one of these:\n"
+                    "• Set a payable account on the vendor (property_account_payable_id)\n"
+                    "• Or set a default payable account on the company (account_payable_id)\n\n"
+                    "Company: %s"
+                ) % (company.display_name,))
+            # IMPORTANT: write in company context
+            partner.sudo().with_company(company).property_account_payable_id = default_payable
+
+        # 2) Pick a purchase journal explicitly
+        journal = self.env["account.journal"].sudo().search([
+            ("type", "=", "purchase"),
+            ("company_id", "=", company.id),
+        ], limit=1)
+        if not journal:
+            raise UserError(_(
+                "Cannot create Commission Vendor Bill because no Purchase Journal exists for company '%s'."
+            ) % (company.display_name,))
 
         bill_vals = {
             "move_type": "in_invoice",
             "partner_id": partner.id,
+            "company_id": company.id,
+            "journal_id": journal.id,
             "invoice_date": fields.Date.context_today(self),
             "ref": _("Commission for %s") % ref_name,
             "invoice_origin": self.name or "",
-            "invoice_line_ids": [
-                (0, 0, {
-                    "name": _("Commission for Invoice %s") % ref_name,
-                    "quantity": 1.0,
-                    "price_unit": self.commission_amount,
-                    "account_id": expense_acc.id,
-                })
-            ],
+            "invoice_line_ids": [(0, 0, {
+                "name": _("Commission for Invoice %s") % ref_name,
+                "quantity": 1.0,
+                "price_unit": float(self.commission_amount or 0.0),
+                "account_id": expense_acc.id,
+            })],
         }
 
-        bill = self.env["account.move"].sudo().create(bill_vals)
+        bill = self.env["account.move"].sudo().with_company(company).create(bill_vals)
+
+        # 3) Extra safety: recompute dynamic lines
+        try:
+            bill._recompute_dynamic_lines(recompute_all_taxes=True)
+        except Exception:
+            pass
+
+        if autopost:
+            try:
+                bill.action_post()
+            except Exception as e:
+                raise UserError(_(
+                    "Commission Vendor Bill was created but could not be posted.\n\n"
+                    "Bill: %s\nError: %s"
+                ) % (bill.display_name, str(e)))
+
         self.sudo().write({"commission_vendor_bill_id": bill.id})
         return bill
 
@@ -221,7 +266,7 @@ class AccountMove(models.Model):
             if move.commission_vendor_bill_id:
                 continue
 
-            move._pa_v1_create_commission_vendor_bill()
+            move._pa_v1_create_commission_vendor_bill(autopost=True)
 
         if len(self) == 1 and self.commission_vendor_bill_id:
             return {
@@ -244,14 +289,16 @@ class AccountMove(models.Model):
             if not move.attributed_partner_id:
                 raise ValidationError(_("Cannot lock invoice attribution without an Attributed Partner."))
 
-            move.write({
+            locked_by = move.attribution_locked_by.id if move.attribution_locked_by else self.env.user.id
+
+            move.sudo().write({
                 "attribution_locked": True,
                 "attribution_locked_at": move.attribution_locked_at or fields.Datetime.now(),
-                "attribution_locked_by": move.attribution_locked_by.id or self.env.user.id,
+                "attribution_locked_by": locked_by,
             })
 
     # ----------------------------
-    # Ledger creation rules (store COMMISSION, not invoice totals)
+    # Ledger creation rules
     # ----------------------------
     def _should_create_partner_ledger(self):
         self.ensure_one()
@@ -275,51 +322,44 @@ class AccountMove(models.Model):
             entry_type = "refund" if move.move_type == "out_refund" else "invoice"
             origin = move.reversed_entry_id if entry_type == "refund" else False
 
-            rate_used = float(move.commission_rate_used or 0.0)
-            commission_signed = float(move.commission_amount or 0.0)
-
             Ledger.create({
                 "company_id": move.company_id.id,
                 "partner_id": move.attributed_partner_id.id,
                 "invoice_id": move.id,
                 "origin_invoice_id": origin.id if origin else False,
                 "entry_type": entry_type,
-                "commission_rate_used": rate_used,
-                "commission_amount": commission_signed,
+                "commission_rate_used": float(move.commission_rate_used or 0.0),
+                "commission_amount": float(move.commission_amount or 0.0),
                 "state": "on_hold",
                 "invoice_paid_at": paid_at or fields.Datetime.now(),
             })
 
-    def _compute_payment_state(self):
-        super()._compute_payment_state()
-
-        if self.env.context.get("skip_partner_ledger_create"):
+    # ----------------------------
+    # SAFE paid-processing
+    # ----------------------------
+    def _pa_v1_process_if_paid(self):
+        if self.env.context.get("pa_v1_processing"):
             return
 
+        self = self.with_context(pa_v1_processing=True)
+        Ledger = self.env["partner.attribution.ledger"].sudo()
+
         for move in self:
+            if not move._should_create_partner_ledger():
+                continue
 
-            # 1️⃣ Create Ledger if needed
-            if move._should_create_partner_ledger():
-                move.with_context(skip_partner_ledger_create=True)._create_partner_ledger_if_needed()
+            move._create_partner_ledger_if_needed()
 
-            # 2️⃣ AUTO Create Commission Vendor Bill
+            bill = False
             if move._pa_v1_should_create_commission_bill():
-                bill = move._pa_v1_create_commission_vendor_bill()
+                bill = move._pa_v1_create_commission_vendor_bill(autopost=True)
 
-                # 3️⃣ Attach Vendor Bill to Ledger (if exists)
-                ledger = self.env["partner.attribution.ledger"].sudo().search(
-                    [("invoice_id", "=", move.id)],
-                    limit=1,
-                )
-                if ledger and bill:
-                    ledger.write({
-                        "vendor_bill_id": bill.id,
-                    })
+            if bill:
+                ledger = Ledger.search([("invoice_id", "=", move.id)], limit=1)
+                if ledger and not ledger.vendor_bill_id:
+                    ledger.write({"vendor_bill_id": bill.id})
 
-            # 4️⃣ Recompute payout state after bill creation
-            ledger_lines = self.env["partner.attribution.ledger"].sudo().search(
-                [("invoice_id", "=", move.id)]
-            )
+            ledger_lines = Ledger.search([("invoice_id", "=", move.id)])
             if ledger_lines:
                 ledger_lines.action_recompute_payout_state()
 
@@ -336,11 +376,24 @@ class AccountMove(models.Model):
             if move.attribution_locked and locked_fields.intersection(vals.keys()):
                 raise UserError(_("Invoice attribution is locked and cannot be changed."))
 
-        return super().write(vals)
+        before_paid = {m.id: (m.payment_state == "paid" and m.state == "posted") for m in self}
+        res = super().write(vals)
+
+        to_process = self.filtered(lambda m: (m.state == "posted" and m.payment_state == "paid" and not before_paid.get(m.id)))
+        if to_process:
+            to_process._pa_v1_process_if_paid()
+
+        return res
 
     def action_post(self):
         res = super().action_post()
+
         to_lock = self.filtered(lambda m: m.state == "posted" and m.attributed_partner_id and not m.attribution_locked)
         if to_lock:
             to_lock._lock_attribution()
+
+        to_process = self.filtered(lambda m: m.state == "posted" and m.payment_state == "paid")
+        if to_process:
+            to_process._pa_v1_process_if_paid()
+
         return res

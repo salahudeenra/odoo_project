@@ -16,3 +16,5 @@ from . import payout_batch
 from . import partner_attribution_inquiry
 
 from . import partner_inquiry_workflow_patch
+
+from . import account_move_line

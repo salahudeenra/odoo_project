@@ -1,12 +1,30 @@
 # -*- coding: utf-8 -*-
+import base64  # kept (you may use it in templates later)
+
 from odoo import http, _
 from odoo.http import request
 
 ROLE_MAP = {
-    "ap": {"slug": "affiliate", "name": "Affiliate Partner", "desc": "Promote us and earn commission on successful referrals."},
-    "lead": {"slug": "lead", "name": "Lead Partner", "desc": "Bring qualified leads; we handle the conversion process."},
-    "sales_agent": {"slug": "sales-agent", "name": "Sales Agent", "desc": "Work deals end-to-end and earn commission on sales."},
-    "sales_partner": {"slug": "sales-partner", "name": "Sales Partner (Buy–Sell)", "desc": "Resell/buy-sell under partner rules and pricing."},
+    "ap": {
+        "slug": "affiliate",
+        "name": "Affiliate Partner",
+        "desc": "Promote us and earn commission on successful referrals.",
+    },
+    "lead": {
+        "slug": "lead",
+        "name": "Lead Partner",
+        "desc": "Bring qualified leads; we handle the conversion process.",
+    },
+    "sales_agent": {
+        "slug": "sales-agent",
+        "name": "Sales Agent",
+        "desc": "Work deals end-to-end and earn commission on sales.",
+    },
+    "sales_partner": {
+        "slug": "sales-partner",
+        "name": "Sales Partner (Buy–Sell)",
+        "desc": "Resell/buy-sell under partner rules and pricing.",
+    },
 }
 SLUG_TO_ROLE = {v["slug"]: k for k, v in ROLE_MAP.items()}
 
@@ -15,9 +33,8 @@ SESSION_KEY = "partner_code"
 
 
 class PartnerWebsiteController(http.Controller):
-
     # -----------------------------
-    # Referral capture (MANDATORY)
+    # Referral capture
     # -----------------------------
     @http.route("/r/<string:code>", type="http", auth="public", website=True, sitemap=False)
     def referral_capture(self, code, **kwargs):
@@ -26,14 +43,20 @@ class PartnerWebsiteController(http.Controller):
 
         partner = request.env["res.partner"].sudo().search(
             [("partner_code", "=", code), ("partner_state", "=", "approved")],
-            limit=1
+            limit=1,
         )
         if not partner:
             return request.redirect(next_url)
 
         request.session[SESSION_KEY] = code
         resp = request.redirect(next_url)
-        resp.set_cookie(COOKIE_NAME, code, max_age=60 * 60 * 24 * 90, httponly=True, samesite="Lax")
+        resp.set_cookie(
+            COOKIE_NAME,
+            code,
+            max_age=60 * 60 * 24 * 90,
+            httponly=True,
+            samesite="Lax",
+        )
         return resp
 
     @http.route("/r", type="http", auth="public", website=True, sitemap=False)
@@ -67,7 +90,7 @@ class PartnerWebsiteController(http.Controller):
         role = ROLE_MAP[role_key]
         return request.render(
             "partner_attribution_v1.website_partner_role_page",
-            {"role_key": role_key, "role": role, "roles": ROLE_MAP}
+            {"role_key": role_key, "role": role, "roles": ROLE_MAP},
         )
 
     @http.route("/partners/apply", type="http", auth="public", website=True, sitemap=True)
@@ -81,7 +104,7 @@ class PartnerWebsiteController(http.Controller):
 
         return request.render(
             "partner_attribution_v1.website_partner_apply",
-            {"roles": ROLE_MAP, "selected_role": role_key}
+            {"roles": ROLE_MAP, "selected_role": role_key},
         )
 
     @http.route("/partners/apply/submit", type="http", auth="public", website=True, methods=["POST"], csrf=True)
@@ -101,18 +124,16 @@ class PartnerWebsiteController(http.Controller):
         irs = (post.get("irs") or "").strip()
 
         if partner_role not in ROLE_MAP:
-            return request.render("partner_attribution_v1.website_partner_apply", {
-                "roles": ROLE_MAP,
-                "selected_role": None,
-                "error": _("Please select a valid Partner Role."),
-            })
+            return request.render(
+                "partner_attribution_v1.website_partner_apply",
+                {"roles": ROLE_MAP, "selected_role": None, "error": _("Please select a valid Partner Role.")},
+            )
 
         if not applicant_name:
-            return request.render("partner_attribution_v1.website_partner_apply", {
-                "roles": ROLE_MAP,
-                "selected_role": partner_role,
-                "error": _("Full Name is required."),
-            })
+            return request.render(
+                "partner_attribution_v1.website_partner_apply",
+                {"roles": ROLE_MAP, "selected_role": partner_role, "error": _("Full Name is required.")},
+            )
 
         inquiry = Inquiry.create({
             "company_id": request.env.company.id,
@@ -130,36 +151,7 @@ class PartnerWebsiteController(http.Controller):
 
         return request.render(
             "partner_attribution_v1.website_partner_apply_done",
-            {"inquiry": inquiry, "roles": ROLE_MAP, "role": ROLE_MAP[partner_role]}
-        )
-
-    @http.route("/partners/portal", type="http", auth="user", website=True, sitemap=False)
-    def partners_portal(self, **kwargs):
-        partner = request.env.user.partner_id.sudo()
-        role = getattr(partner, "partner_role", False) if partner else False
-        role_label = ROLE_MAP.get(role, {}).get("name") if role else ""
-
-        Ledger = request.env["partner.attribution.ledger"].sudo()
-        lines = Ledger.search([("partner_id", "=", partner.id)]) if partner else Ledger.browse([])
-
-        payable_amount = sum(lines.filtered(lambda l: l.state == "payable").mapped("commission_amount"))
-        paid_amount = sum(lines.filtered(lambda l: l.state == "paid").mapped("commission_amount"))
-        on_hold_amount = sum(lines.filtered(lambda l: l.state == "on_hold").mapped("commission_amount"))
-
-        ledger_lines = lines.sorted(lambda x: x.id, reverse=True)[:50]
-
-        return request.render(
-            "partner_attribution_v1.portal_partner_dashboard",
-            {
-                "partner": partner,
-                "role": role,
-                "role_label": role_label,
-                "ledger_count": len(lines),
-                "payable_amount": payable_amount,
-                "paid_amount": paid_amount,
-                "on_hold_amount": on_hold_amount,
-                "ledger_lines": ledger_lines,
-            }
+            {"inquiry": inquiry, "roles": ROLE_MAP, "role": ROLE_MAP[partner_role]},
         )
 
     @http.route("/partners/privacy", type="http", auth="public", website=True, sitemap=True)

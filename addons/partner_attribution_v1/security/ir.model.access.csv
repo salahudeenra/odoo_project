@@ -1,9 +1,12 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_partner_attribution_ledger_portal,partner.attribution.ledger portal,model_partner_attribution_ledger,base.group_portal,1,0,0,0
 access_partner_attribution_ledger_officer,partner.attribution.ledger officer,model_partner_attribution_ledger,partner_attribution_v1.group_partner_attr_officer,1,0,0,0
 access_partner_attribution_ledger_manager,partner.attribution.ledger manager,model_partner_attribution_ledger,partner_attribution_v1.group_partner_attr_manager,1,1,1,1
-
 access_partner_attr_payout_batch_officer,partner.attribution.payout.batch officer,model_partner_attribution_payout_batch,partner_attribution_v1.group_partner_attr_officer,1,0,0,0
 access_partner_attr_payout_batch_manager,partner.attribution.payout.batch manager,model_partner_attribution_payout_batch,partner_attribution_v1.group_partner_attr_manager,1,1,1,1
-
 access_partner_attribution_inquiry_officer,partner.attribution.inquiry officer,model_partner_attribution_inquiry,partner_attribution_v1.group_partner_attr_officer,1,0,0,0
 access_partner_attribution_inquiry_manager,partner.attribution.inquiry manager,model_partner_attribution_inquiry,partner_attribution_v1.group_partner_attr_manager,1,1,1,1
+access_ir_attachment_portal_partner_docs,ir.attachment portal partner docs,base.model_ir_attachment,base.group_portal,1,0,1,0
+access_crm_lead_portal_partner,crm.lead portal partner,crm.model_crm_lead,base.group_portal,1,0,1,0
+access_sale_order_portal_partner,sale.order portal partner,sale.model_sale_order,base.group_portal,1,0,0,0
+access_account_move_portal_partner,account.move portal partner,account.model_account_move,base.group_portal,1,0,0,0
